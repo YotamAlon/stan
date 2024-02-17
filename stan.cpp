@@ -7,6 +7,7 @@
 #include <netinet/ip6.h>
 #include <net/ethernet.h>
 #include <filesystem>
+#include <linux/tcp.h>
 
 using namespace std;
 
@@ -19,7 +20,7 @@ struct Stats {
 int main(int argc, char *argv[]) {
     string file = argv[1];
     std::filesystem::path cwd = std::filesystem::current_path();
-    std::unordered_map<std::string, std::string> stats_map;
+    std::unordered_map<uint32_t, Stats> stats_map;
  
     // Note: errbuf in pcap_open functions is assumed to be able to hold at least PCAP_ERRBUF_SIZE chars
     //       PCAP_ERRBUF_SIZE is defined as 256.
@@ -60,13 +61,30 @@ int main(int argc, char *argv[]) {
         if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
             struct iphdr* ip_header;
             ip_header = (struct iphdr*) (data + 8);
-            uint32_t sender = ip_header->saddr;
-            uint32_t receiver = ip_header->daddr;
+            uint32_t sender = ntohl(ip_header->saddr);
+            uint32_t receiver = ntohl(ip_header->daddr);
+            stats_map[sender].kilobits += header->len;
+            stats_map[sender].packets += 1;
+            if (ntohs(ip_header->protocol) == IPPROTO_TCP) {
+                struct tcphdr* tcp_header;
+                tcp_header = (struct tcphdr*) (data + 20);
+                if (tcp_header->syn && tcp_header->ack) {
+                    stats_map[receiver].connections += 1;
+                }
+            }
         }
         // else if (ntohs(eth_header->ether_type) == ETHERTYPE_IPV6) {
         //     struct ip6_hdr *ip_header;
         //     ip_header = (struct ip6_hdr *) data[32];
         // }
+    }
+
+    std::cout << "IP \t bits \t packets \t conns" << std::endl;
+    for (auto iter = stats_map.begin(); iter != stats_map.end(); ++iter) {
+        auto cur = iter->first;
+        struct in_addr addr = {cur};
+        auto stats = stats_map[cur];
+        std::cout << inet_ntoa(addr) << " \t" << stats.kilobits << " \t" << stats.packets << " \t" << stats.connections << std::endl;
     }
 };
 
