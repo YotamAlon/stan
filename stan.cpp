@@ -60,14 +60,14 @@ int main(int argc, char *argv[]) {
         eth_header = (struct ether_header*) data;
         if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
             struct iphdr* ip_header;
-            ip_header = (struct iphdr*) (data + 8);
-            uint32_t sender = ntohl(ip_header->saddr);
-            uint32_t receiver = ntohl(ip_header->daddr);
+            ip_header = (struct iphdr*) (data + sizeof(*eth_header));
+            uint32_t sender = ip_header->saddr;
+            uint32_t receiver = ip_header->daddr;
             stats_map[sender].kilobits += header->len;
             stats_map[sender].packets += 1;
-            if (ntohs(ip_header->protocol) == IPPROTO_TCP) {
+            if (ip_header->protocol == IPPROTO_TCP) {
                 struct tcphdr* tcp_header;
-                tcp_header = (struct tcphdr*) (data + 20);
+                tcp_header = (struct tcphdr*) (data + sizeof(*eth_header) + sizeof(*ip_header));
                 if (tcp_header->syn && tcp_header->ack) {
                     stats_map[receiver].connections += 1;
                 }
@@ -89,15 +89,17 @@ int main(int argc, char *argv[]) {
 };
 
 
-void print_packet(pcap_pkthdr *header, const u_char *data)
+stringstream print_packet(pcap_pkthdr* header, const u_char* data)
 {
+    stringstream output;
     for (u_int i = 0; (i < header->caplen); i++)
     {
         // Start printing on the next after every 16 octets
         if ((i % 16) == 0)
-            printf("\n");
+            output << "\n";
 
         // Print each octet as hex (x), make sure there is always two characters (.2).
-        printf("%.2x ", data[i]);
+        output << "%.2x ", data[i];
     }
+    return output;
 }
