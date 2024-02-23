@@ -8,6 +8,7 @@
 #include <net/ethernet.h>
 #include <filesystem>
 #include <linux/tcp.h>
+#include <unordered_set>
 
 using namespace std;
 
@@ -15,6 +16,7 @@ struct Stats {
     float kilobits;
     int packets;
     int connections;
+    unordered_set<int> syn_seqs;
 };
 
 int main(int argc, char *argv[]) {
@@ -60,17 +62,21 @@ int main(int argc, char *argv[]) {
         eth_header = (struct ether_header*) data;
         if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
             struct iphdr* ip_header;
-            ip_header = (struct iphdr*) (data + sizeof(*eth_header));
+            ip_header = (struct iphdr*) (eth_header + 1);
             uint32_t sender = ip_header->saddr;
             uint32_t receiver = ip_header->daddr;
             stats_map[sender].kilobits += header->len;
             stats_map[sender].packets += 1;
             if (ip_header->protocol == IPPROTO_TCP) {
                 struct tcphdr* tcp_header;
-                tcp_header = (struct tcphdr*) (data + sizeof(*eth_header) + sizeof(*ip_header));
-                if (tcp_header->syn && tcp_header->ack) {
-                    stats_map[receiver].connections += 1;
-                }
+                tcp_header = (struct tcphdr*) (ip_header + 1);
+                if (tcp_header->syn && !tcp_header->ack) {
+                    stats_map[sender].syn_seqs.insert(ntohl(tcp_header->seq));
+                } else if (tcp_header->ack && !tcp_header->syn) {
+                    if (stats_map[sender].syn_seqs.count(ntohl(tcp_header->seq) - 1)){
+                        stats_map[sender].connections += 1;
+                        stats_map[sender].syn_seqs.erase(ntohl(tcp_header->seq) - 1);
+                }}
             }
         }
         // else if (ntohs(eth_header->ether_type) == ETHERTYPE_IPV6) {
