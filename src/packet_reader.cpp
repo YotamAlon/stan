@@ -14,7 +14,7 @@ PacketReader::~PacketReader()
 }
 
 std::optional<Packet> PacketReader::read_packet() {
-    while (int returnValue = pcap_next_ex(pcap, &header, &data) >= 0)
+    while (int returnValue = pcap_next_ex(this->pcap, &this->header, &this->data) >= 0)
     {
         // Show a warning if the length captured is different
         if (header->len != header->caplen)
@@ -50,4 +50,5 @@ std::optional<Packet> PacketReader::read_packet() {
             return packet;
         }
     }
+    return {};
 }

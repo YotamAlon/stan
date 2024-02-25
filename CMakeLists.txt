@@ -8,11 +8,11 @@ FetchContent_Declare(
   pcap
   GIT_REPOSITORY https://github.com/the-tcpdump-group/libpcap.git
   GIT_TAG        104271ba4a14de6743e43bcf87536786d8fddea4 # libpcap-1.10.4
-  )
-  FetchContent_MakeAvailable(pcap)
+)
+FetchContent_MakeAvailable(pcap)
   
   
-set(SOURCES packet_reader.cpp packet_reader.hpp)
-add_executable(stan stan.cpp packet_reader.hpp packet_reader.cpp)
+file(GLOB_RECURSE sources src/*.cpp src/*.hpp)
+add_executable(stan stan.cpp ${sources})
 target_link_libraries(stan pcap)
 set_property(TARGET stan PROPERTY CXX_STANDARD 17)

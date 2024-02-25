@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <linux/tcp.h>
 #include <unordered_set>
-#include "packet_reader.hpp"
+#include "src/packet_reader.hpp"
 
 using namespace std;
 
@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     std::string file = argv[1];
     std::filesystem::path cwd = std::filesystem::current_path();
     std::unordered_map<uint32_t, Stats> stats_map;
-    PacketReader *packet_reader = new PacketReader(file.c_str());
+    PacketReader *packet_reader = new PacketReader(file);
 
     while (std::optional<Packet> packet = packet_reader->read_packet())
     {
