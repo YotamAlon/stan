@@ -13,6 +13,6 @@ FetchContent_MakeAvailable(pcap)
   
   
 file(GLOB_RECURSE sources src/*.cpp src/*.hpp)
-add_executable(stan stan.cpp ${sources})
+add_executable(stan main.cpp ${sources})
 target_link_libraries(stan pcap)
 set_property(TARGET stan PROPERTY CXX_STANDARD 17)

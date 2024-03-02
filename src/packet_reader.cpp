@@ -11,10 +11,11 @@ using namespace std;
 
 PacketReader::~PacketReader()
 {
+    pcap_close(pcap);
 }
 
 std::optional<Packet> PacketReader::read_packet() {
-    while (int returnValue = pcap_next_ex(this->pcap, &this->header, &this->data) >= 0)
+    if (int returnValue = pcap_next_ex(this->pcap, &this->header, &this->data) > 0)
     {
         // Show a warning if the length captured is different
         if (header->len != header->caplen)
@@ -23,7 +24,7 @@ std::optional<Packet> PacketReader::read_packet() {
         // Show Epoch Time
         // printf("Epoch Time: %d:%d seconds\n", header->ts.tv_sec, header->ts.tv_usec);
         if (header->caplen < 8) {
-            continue;
+            return {};
         }
 
         struct ether_header* eth_header;
@@ -49,6 +50,10 @@ std::optional<Packet> PacketReader::read_packet() {
             }
             return packet;
         }
+        // else if (ntohs(eth_header->ether_type) == ETHERTYPE_IPV6) {
+        //     struct ip6_hdr *ip_header;
+        //     ip_header = (struct ip6_hdr *) data[32];
+        // }
     }
     return {};
 }
